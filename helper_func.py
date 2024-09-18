@@ -8,24 +8,22 @@ from pyrogram.enums import ChatMemberStatus
 from config import FORCE_SUB_CHANNELS, ADMINS
 from pyrogram.errors.exceptions.bad_request_400 import UserNotParticipant
 from pyrogram.errors import FloodWait
+from typing import Union
+from database.database import check_join_request
 
-async def is_subscribed(filter, client, update):
+async def is_subscribed(filter, client, update) -> Union[bool, int]:
     if not FORCE_SUB_CHANNELS:
         return True
-    
+
     user_id = update.from_user.id
     if user_id in ADMINS:
         return True
-    
-    for channel in FORCE_SUB_CHANNELS:
-        try:
-            member = await client.get_chat_member(chat_id=channel, user_id=user_id)
-            if member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.MEMBER]:
-                return True
-        except UserNotParticipant:
-            continue
-    
-    return False
+
+    for group_id in FORCE_SUB_CHANNELS:
+        if not await check_join_request(group_id, user_id):
+            return False
+
+    return True
 
 async def encode(string):
     string_bytes = string.encode("ascii")
