@@ -34,11 +34,8 @@ class Bot(Client):
         if FORCE_SUB_CHANNELS:
             for channel in FORCE_SUB_CHANNELS:
                 try:
-                    chat = await self.get_chat(channel)
-                    link = chat.invite_link
-                    if not link:
-                        link = await self.export_chat_invite_link(channel)
-                    self.invite_links[channel] = link
+                    link = await self.create_chat_invite_link(channel, creates_join_request=True)
+                    self.invite_links[channel] = link.invite_link
                 except Exception as a:
                     self.LOGGER(__name__).warning(f"Error in channel {channel}: {a}")
                     self.LOGGER(__name__).warning(f"Please check the FORCE_SUB_CHANNELS value and make sure the Bot is Admin in all channels with Invite Users via Link Permission.")
