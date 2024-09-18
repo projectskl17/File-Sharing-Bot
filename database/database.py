@@ -1,10 +1,6 @@
-#(©)CodeXBotz
-
-
-
-
 import pymongo, os
 from config import DB_URI, DB_NAME
+from pymongo.collection import Collection
 
 
 dbclient = pymongo.MongoClient(DB_URI)
@@ -12,7 +8,7 @@ database = dbclient[DB_NAME]
 
 
 user_data = database['users']
-
+join_requests: Collection = database['join_requests']
 
 
 async def present_user(user_id : int):
@@ -34,3 +30,17 @@ async def full_userbase():
 async def del_user(user_id: int):
     user_data.delete_one({'_id': user_id})
     return
+
+async def add_join_request(group_id: int, user_id: int) -> None:
+    join_requests.insert_one({
+        'group_id': group_id,
+        'user_id': user_id,
+    })
+
+async def check_join_request(group_id: int, user_id: int) -> bool:
+    request = join_requests.find_one({
+        'group_id': group_id,
+        'user_id': user_id
+    })
+    return request
+
