@@ -7,13 +7,13 @@ import os
 import asyncio
 from pyrogram import Client, filters, __version__
 from pyrogram.enums import ParseMode
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ChatJoinRequest
 from pyrogram.errors import FloodWait, UserIsBlocked, InputUserDeactivated
 
 from bot import Bot
 from config import ADMINS, FORCE_MSG, START_MSG, CUSTOM_CAPTION, DISABLE_CHANNEL_BUTTON, PROTECT_CONTENT, FORCE_SUB_CHANNELS
 from helper_func import subscribed, encode, decode, get_messages
-from database.database import add_user, del_user, full_userbase, present_user
+from database.database import add_user, del_user, full_userbase, present_user, add_join_request, check_join_request
 
 
 
@@ -121,10 +121,11 @@ REPLY_ERROR = """<code>Use this command as a replay to any telegram message with
 @Bot.on_message(filters.command('start') & filters.private)
 async def not_joined(client: Client, message: Message):
     buttons = []
+    user_id = message.from_user.id
     for channel in FORCE_SUB_CHANNELS:
-        chat = await client.get_chat(channel)
-        invite_link = await chat.export_invite_link()
-        buttons.append([InlineKeyboardButton("Join Channel", url=invite_link)])
+        if not await check_join_request(channel, user_id):
+            invite_link = client.invite_links[channel]
+            buttons.append([InlineKeyboardButton(f"Join Channel", url=invite_link)])
     
     try:
         buttons.append(
@@ -202,3 +203,10 @@ Unsuccessful: <code>{unsuccessful}</code></b>"""
         msg = await message.reply(REPLY_ERROR)
         await asyncio.sleep(8)
         await msg.delete()
+
+@Bot.on_chat_join_request(filters.chat(FORCE_SUB_CHANNELS))
+async def handle_chat_join_request(client: Client, join_request: ChatJoinRequest):
+    user_id = join_request.from_user.id
+    group_id = join_request.chat.id
+    if not await check_join_request(group_id, user_id):
+        await add_join_request(group_id, user_id)
